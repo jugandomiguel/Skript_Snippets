@@ -1,0 +1,79 @@
+#########################################################
+#This was made by ofuswill (715690894556266528)
+#########################################################
+
+import:
+    com.sk89q.worldedit.regions.CuboidRegion
+    java.io.File
+    org.bukkit.Bukkit
+    com.sk89q.worldedit.WorldEdit
+    com.sk89q.worldedit.session.PasteBuilder
+    com.sk89q.worldedit.session.ClipboardHolder
+    com.sk89q.worldedit.bukkit.BukkitWorld
+    com.sk89q.worldedit.bukkit.BukkitAdapter
+    com.sk89q.worldedit.math.BlockVector3
+    com.sk89q.worldedit.extent.clipboard.Clipboard
+    com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats
+    com.sk89q.worldedit.function.operation.Operations
+
+options:
+    root: "plugins/FastAsyncWorldEdit/schematics/"
+
+on script load:
+    set {-we} to WorldEdit.getInstance()
+
+expression:
+    patterns:
+        [worldedit] selection of %player%
+        %player%'s [worldedit] selection
+    return type: object
+    get:
+        set {_manager} to {-we}.getSessionManager()
+        set {_session} to {_manager}.findByName(name of expr-1)
+        set {_selection} to {_session}.getSelection()
+
+        return {_selection}
+effect paste schematic %string% (1:at %-location%|2:using %-player%):
+    trigger:
+        set {_path} to concat({@root}, expr-1, ".schem")
+        set {_file} to new File({_path})
+
+        set {_target} to expr-2 if parse mark = 1 else expr-3
+        set {_world} to new BukkitWorld(world of {_target})
+
+        set {_pos} to BlockVector3.at({_target}.getX(), {_target}.getY(), {_target}.getZ())
+
+        set {_session} to {-we}.newEditSession({_world})
+
+        set {_clipboard} to ClipboardFormats.findByFile({_file}).load({_file})
+
+        set {_builder} to new ClipboardHolder({_clipboard}).createPaste({_session})
+
+        {_builder}.to({_pos})
+        {_builder}.ignoreAirBlocks(false)
+        {_builder}.maskSource(null)
+
+        Operations.complete({_builder}.build())
+
+        {_session}.close()
+
+        if parse mark = 2:
+            set {_localSession} to {-we}.getSessionManager().findByName(name of {_target})
+            {_localSession}.remember({_session})
+
+
+effect create schematic %string% using %player%:
+    trigger:
+        set {_path} to concat({@root}, expr-1, ".schem")
+        set {_file} to new File({_path})
+        set {_selection} to selection of expr-2
+        exit if {_selection} is not set
+        set {_pos1} to {_selection}.getMinimumPoint()
+        set {_pos2} to {_selection}.getMaximumPoint()
+        set {_loc} to location of block at expr-2
+        set {_origin} to BlockVector3.at({_loc}.getX(), {_loc}.getY(), {_loc}.getZ())
+        set {_world} to new BukkitWorld(expr-2.getWorld())
+        set {_region} to new CuboidRegion({_world}, {_pos1}, {_pos2})
+        set {_clipboard} to Clipboard.create({_region})
+        {_clipboard}.setOrigin({_origin})
+        {_clipboard}.save({_file}, ClipboardFormats.findByAlias("FAWE"))
